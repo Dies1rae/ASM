@@ -1,0 +1,193 @@
+;Print str, RDX LENGTH OF BUFF, RSI PTR TO DATA
+_PRINT_STR:
+    push rbp
+    mov rbp, rsp
+
+    mov rax, 1
+    mov rdi, 1
+    syscall
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+;read from input to buffer, buffer for read in RSI, max size in RDX, return len in RAX
+_READ:
+    push rbp
+    mov rbp, rsp
+
+    mov rax, 0
+    mov rdi, 0
+    syscall
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+;parse and print int, RDI int var to print, RSI databuffer, RDX databuffer size
+_PRINT_INT:
+    push rbp
+    mov rbp, rsp
+
+    push rbx
+    push r12
+    push r13
+    push r14
+
+    cmp rdi, 0
+    jge .is_positive
+    neg rdi
+    
+    push rdi                    ; Preserve our positive number
+    push rcx                    ; Preserve buffer pointer
+    push rdx
+    push rsi
+    
+    mov rdx, 1
+    mov rsi, '-'
+    call _PRINT_STR
+    
+    pop rsi
+    pop rdx
+    pop rcx                     ; Restore buffer pointer
+    pop rdi
+.is_positive:
+    mov r14, rdx
+    mov r12, rdi
+    lea r13, [rsi + r14 - 1]
+    mov byte [r13], 0xA
+.loop:
+    dec r13
+    mov rax, r12
+    xor rdx, rdx
+    mov rbx, 10
+    div rbx
+    add dl, '0'
+    mov [r13], dl
+    mov r12, rax
+    test rax, rax
+    jnz .loop
+    lea rax, [rsi + r14]
+    sub rax, r13
+
+    mov rdx, rax
+    mov rsi, r13
+    call _PRINT_STR
+    
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+;int to buffer, databuffer to RSI, return len in RAX
+_PARSE_INT:
+    push rbp
+    mov rbp, rsp
+
+    xor r8, r8
+    xor rcx, rcx
+    xor rax, rax
+.loop:
+    cmp rcx, rdx
+    jge .done
+    movzx rbx, byte [rsi + rcx]
+    cmp rbx, '-'
+    je .is_neg
+    
+    cmp rbx, '0'
+    jl .done
+
+    cmp rbx, '9'
+    jg .done
+
+    sub rbx, '0'
+    imul rax, 10
+    add rax, rbx
+    inc rcx
+    jmp .loop
+.is_neg:
+    mov r8, 1
+    inc rcx
+    jmp .loop
+.done:
+    cmp r8, 1
+    je .do_neg
+    mov rsp, rbp
+    pop rbp
+    ret
+.do_neg:
+    neg rax
+    xor r8, r8
+    jmp .done
+
+
+;SOME MACROSES
+%macro print 2
+    push rax
+    push rdi
+    push rsi
+    push rdx
+
+    mov  rax, 1
+    mov  rdi, 1
+    mov  rsi, %1
+    mov  rdx, %2
+    syscall
+
+    pop  rdx
+    pop  rsi
+    pop  rdi
+    pop  rax
+%endmacro
+
+
+%macro println 2
+    print %1, %2
+%endmacro
+
+
+%macro toUpper 1
+    push rcx
+    push rax
+    push rdi
+    push rdx
+    push r8
+
+    xor rdx, rdx    ;symbol
+    xor rcx, rcx    ;ctr
+    mov rdi, %1     ;str_buf
+
+    %%loop:
+        mov bl, [rdi + rcx]
+        cmp bl, 0xA
+        je %%end_loop
+
+        cmp bl, 'a'
+        jb %%incr
+
+        cmp bl, 'z'
+        ja %%incr
+
+        sub bl, 32
+        mov [rdi + rcx], bl
+        inc rcx
+        jmp %%loop
+
+        %%incr:
+            inc rcx
+            jmp %%loop
+    %%end_loop:
+
+    pop r8
+    pop rdx
+    pop rdi
+    pop rax
+    pop rcx
+%endmacro
+

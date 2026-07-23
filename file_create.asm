@@ -60,7 +60,7 @@ write_all:
     ret
 .error:
     ; обработка ошибки
-    mov rax, 1
+    mov rax, -1
     pop r14
     pop r13
     pop rbx
@@ -79,14 +79,6 @@ CREATE_FILE:
     mov rdx, 0o755          ; права: rw-r--r--
     syscall
 
-    test rax, rax
-    js .error
-    
-    mov rsp, rbp
-    pop rbp
-    ret
-.error:
-    mov rax, -1
     mov rsp, rbp
     pop rbp
     ret
@@ -129,6 +121,9 @@ _start:
 ;CREATE FILE WITH 0o755 0x241
     mov rdi, filename_buffer
     call CREATE_FILE
+;ERROR CHECK
+    test rax, rax
+    js .error
 ;SAVE FD in R12
     mov r12, rax
 ;WRITE USER INPUt INTO FILE AND SAVE
@@ -136,13 +131,10 @@ _start:
     mov rdx, r11
     mov rdi, r12
     call SAVE_TO_FILE
-
+;ERROR CHECK
     test rax, rax
     js .error
-.error:
-    mov rax, 60
-    mov rdi, 1
-    syscall
+
 .exit_good:
     ; close(fd)
     ;CLOSE FILE
@@ -152,4 +144,7 @@ _start:
     mov rax, 60
     mov rdi, 0
     syscall
-
+.error:
+    mov rax, 60
+    mov rdi, 1
+    syscall

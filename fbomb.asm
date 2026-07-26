@@ -12,6 +12,7 @@ section .rodata
 
 section .bss
 
+section .text
 _start:
 ;PRINT LOGO
     println bfb, bfb_len

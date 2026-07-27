@@ -1,3 +1,6 @@
+section .rodata
+    MINUSCHAR db "-"
+
 ;Print str, RDX LENGTH OF BUFF, RSI PTR TO DATA
 _PRINT_STR:
     push rbp
@@ -46,7 +49,7 @@ _PRINT_INT:
     push rsi
     
     mov rdx, 1
-    mov rsi, '-'
+    mov rsi, MINUSCHAR
     call _PRINT_STR
     
     pop rsi
@@ -125,6 +128,78 @@ _PARSE_INT:
     neg rax
     xor r8, r8
     jmp .done
+
+
+;Ptr to bytestr in RSI, bytestr len in RDX, return max int in RAX
+_FIND_MAX_IN_CHARSTR:
+    push rbp
+    mov rbp, rsp
+    push r15
+    push rbx
+
+    mov rcx, 0
+    xor rax, rax
+    mov r8, 0x8000000000000000
+.loop:
+    cmp rcx, rdx
+    jge .done
+    movzx rbx, byte [rsi + rcx]
+    cmp rbx, 0xA
+    je .done
+
+    cmp rbx, ' '
+    je .skip
+
+    cmp rbx, '-'
+    je .negotiate_byte
+
+    cmp rbx, '0'
+    jl .done
+
+    cmp rbx, '9'
+    jg .done
+
+    sub rbx, '0'
+    imul rax, 10
+    add rax, rbx
+    inc rcx
+    jmp .loop
+.skip:
+    cmp r15, 1
+    je .neg_
+    cmp r8, rax
+    jl .swap
+    inc rcx
+    xor rax, rax
+    jmp .loop
+    .neg_:
+        neg rax
+        xor r15, r15
+        jmp .skip
+    .swap:
+        mov r8, rax
+        jmp .skip
+.negotiate_byte:
+    mov r15, 1
+    inc rcx
+    jmp .loop
+.done:
+    cmp r15, 1
+    je .neglast_
+    cmp r8, rax
+    jg .swaplast
+    pop rbx
+    pop r15
+    mov rsp, rbp
+    pop rbp
+    ret
+    .neglast_:
+        neg rax
+        xor r15, r15
+        jmp .done
+    .swaplast:
+        mov rax, r8
+        jmp .done
 
 
 ;SOME MACROSES

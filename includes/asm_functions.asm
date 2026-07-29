@@ -88,7 +88,7 @@ _PRINT_INT:
     ret
 
 
-;int to buffer, databuffer to RSI, return len in RAX
+;int to rax from buffer, databuffer to RSI, return int data in RAX
 _PARSE_INT:
     push rbp
     mov rbp, rsp
@@ -200,6 +200,45 @@ _FIND_MAX_IN_CHARSTR:
     .swaplast:
         mov rax, r8
         jmp .done
+
+
+;Get strbuffer ptr to RSI, get strbuffer max len to RDX,int to RDI, return new buffer in RSI and len in rax 
+_PARSE_INT_TO_STR_BUFF:
+    push rbp
+    mov rbp, rsp
+    push rbx
+
+    mov rbx, 10
+    mov rax, rdi
+    xor rcx, rcx
+.loop_convert:
+    xor rdx, rdx
+    div rbx
+    add dl, '0'
+    push rdx
+    inc rcx
+    test rax, rax
+    jnz .loop_convert
+
+    mov rdi, rsi
+    mov rbx, rcx
+
+.loop_restore:
+    pop rdx
+    mov [rdi], dl
+    inc rdi
+    dec rcx
+    jnz .loop_restore
+
+    mov byte [rdi], 0xA ; OR MAYBE JUST 0
+    inc rbx
+    mov rax, rbx
+
+    pop rsi
+    pop rbx
+    mov rsp, rbp
+    pop rbp
+    ret
 
 
 ;SOME MACROSES

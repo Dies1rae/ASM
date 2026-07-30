@@ -230,12 +230,29 @@ _PARSE_INT_TO_STR_BUFF:
     dec rcx
     jnz .loop_restore
 
-    mov byte [rdi], 0xA ; OR MAYBE JUST 0
+    mov byte [rdi], 0xA ; OR MAYBE JUST 0 or nothing 
     inc rbx
     mov rax, rbx
 
     pop rsi
     pop rbx
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
+;R8 ptr to first str, R9 len of first str, R10 ptr to second str, RAX len of second str, return RSI ptr to appended first str, RAX new len first str 
+_APPEND_FIRST_STR:
+    push rbp
+    mov rbp, rsp
+
+    lea rsi, [r10]
+    lea rdi, [r8 + r9 - 1] ;if you do not need \0 in first string get -1 from len
+    mov rcx, rax
+    cld
+    rep movsb
+    add rax, r9
+
     mov rsp, rbp
     pop rbp
     ret

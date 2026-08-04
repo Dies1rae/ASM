@@ -92,6 +92,7 @@ _PRINT_INT:
 _PARSE_INT:
     push rbp
     mov rbp, rsp
+    push rbx
 
     xor r8, r8
     xor rcx, rcx
@@ -121,6 +122,7 @@ _PARSE_INT:
 .done:
     cmp r8, 1
     je .do_neg
+    pop rbx
     mov rsp, rbp
     pop rbp
     ret

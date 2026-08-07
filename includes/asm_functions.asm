@@ -243,6 +243,24 @@ _PARSE_INT_TO_STR_BUFF:
     ret
 
 
+; strlen(rsi) — длина строки, результат в rax
+_STRLEN:
+    push rbp
+    mov rbp, rsp
+    xor rax, rax
+.loop:
+    cmp byte [rsi + rax], 0
+    je .done
+    cmp byte [rsi + rax], 0xA
+    je .done
+    inc rax
+    jmp .loop
+.done:
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
 ;R8 ptr to first str, R9 len of first str, R10 ptr to second str, RAX len of second str, return RSI ptr to appended first str, RAX new len first str 
 _APPEND_FIRST_STR:
     push rbp

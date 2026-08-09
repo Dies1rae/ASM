@@ -1,6 +1,8 @@
 section .rodata
     MINUSCHAR db "-"
 
+
+section .text
 ;Print str, RDX LENGTH OF BUFF, RSI PTR TO DATA
 _PRINT_STR:
     push rbp

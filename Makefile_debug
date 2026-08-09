@@ -1,7 +1,0 @@
-all:
-        nasm -f elf64 -g -F dwarf $(source).asm
-        ld -o $(source) $(source).o
-        rm $(source).o
-~                                                                                                       
-~                                                                                                       
-~                               

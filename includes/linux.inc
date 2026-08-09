@@ -15,4 +15,9 @@ EXIT_ERR   equ 1
 
 NEWLINE    equ 10
 
+;NETWORK EQU FOR SOCKETS
+AF_INET      equ 2
+SOCK_STREAM  equ 1
+IPPROTO_TCP  equ 6
+
 %endif

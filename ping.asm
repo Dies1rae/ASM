@@ -51,9 +51,17 @@ section .data
 
 section .rodata
     TIME_KEY db "-t"
+    STANDART_CTR equ 4
+    PING_PRINT db "ping success for ip: "
+    PING_PRINT_SIZE equ ($ - PING_PRINT)
+    PAYLOAD_DATA db " payload packet data: "
+    PAYLOAD_DATA_SIZE equ ($ - PAYLOAD_DATA)
+    TIMEOUT db "ping timeout for ip: "
+    TIMEOUT_SIZE equ ($ - TIMEOUT)
 
 
 section .bss
+    IP_ADDR_STR_SIZE resb 1
     READER_BUFFER resb 15
     PRINTER_BUFFER resb 4096    
     PING_ADDR resb 16
@@ -81,25 +89,25 @@ _GET_RAW_SOCKET:
 _start:
 ;GET STRING FOR IP ADDRES
     mov rbx, [rsp]
-;More than 3 arg (name, addr, -t opt)
+    ;More than 3 arg (name, addr, -t opt)
     cmp rbx, 3
     jg .errorexit
-;Less than 2arg (name, addr)    
+    ;Less than 2arg (name, addr)    
     cmp rbx, 1
     jle .errorexit
 
     lea r12, [rsp + 8]
-
     mov rsi, [rsp + 16]
     call _STRLEN
-    
+    mov [IP_ADDR_STR_SIZE], rax
+
     ;DEBUG PRINTS
-    mov rsi, [rsp + 16]
-    mov rdx, rax
-    call _PRINT_STR
-    mov rsi, NEWSTRING
-    mov rdx, 1
-    call _PRINT_STR
+    ;mov rsi, [rsp + 16]
+    ;mov rdx, [IP_ADDR_STR_SIZE]
+    ;call _PRINT_STR
+    ;mov rsi, NEWSTRING
+    ;mov rdx, 1
+    ;call _PRINT_STR
     
     ;CONVERT ADDR TO BIN
     mov rsi, [rsp + 16]
@@ -115,13 +123,13 @@ _start:
     mov dword [PING_ADDR + SOCKADDR_IN.sin_addr], eax
     mov qword [PING_ADDR + SOCKADDR_IN.sin_zero], 0
     ;DEBUG PRINT
-    mov rdi, [PING_ADDR + SOCKADDR_IN.sin_addr]
-    mov rsi, PRINTER_BUFFER
-    mov rdx, 4096
-    call _PRINT_INT    
-    mov rsi, NEWSTRING
-    mov rdx, 1
-    call _PRINT_STR
+    ;mov rdi, [PING_ADDR + SOCKADDR_IN.sin_addr]
+    ;mov rsi, PRINTER_BUFFER
+    ;mov rdx, 4096
+    ;call _PRINT_INT    
+    ;mov rsi, NEWSTRING
+    ;mov rdx, 1
+    ;call _PRINT_STR
 
     call _GET_RAW_SOCKET
     ;test for sock err
@@ -143,7 +151,12 @@ _start:
     test rax, rax
     js .errorexit
     
-.timeout:
+    ;main ctr, run loop without -t
+    xor r13, r13
+.main_loop:
+    ;if more 4 ping just exit without -t arg
+    cmp r13, STANDART_CTR
+    jge .noerrorexit
     ;sendto syscall (sock_fd, buf, len, flags, dest_addr, addr_len)
     mov rax, 44
     mov rdi, r15
@@ -151,7 +164,7 @@ _start:
     mov rdx, ICMP_PACKET_SIZE
     mov r10, 0
     mov r8, PING_ADDR
-    mov r9, 16
+    mov r9, SOCKADDR_SIZE
     syscall
     ;NEED TO CHECK RAX FOR ERRROR if < 0 error, other bytes send
     cmp rax, 0
@@ -167,17 +180,29 @@ _start:
     mov r9,  SOCKADDR_SIZE_VAR
     syscall
     ;NEED TO CHECK RAX FOR ERRROR if < 0 error, other bytes send
-    ;THIS IS TIMEOUT
+    ;THIS IS TIMEOUT NEED TO PRINT TIMEOUT
     cmp rax, -11
-    je .timeout
+    je .main_loop
     ;THIS IS FATAL ERRIR
     cmp rax, 0
     jle .errorexit
-    
+    ;STORE RECV DATA LEN
+    mov r14, rax
+
     ;NEED TO CHECK RECV_BUFFER ON TIMEOUT AND ICMP PROTO
+    ;MAIN PRINT
+    mov rsi, PING_PRINT
+    mov rdx, PING_PRINT_SIZE
+    call _PRINT_STR
+    mov rsi, [rsp + 16]
+    mov rdx, [IP_ADDR_STR_SIZE]
+    call _PRINT_STR
+    mov rsi, PAYLOAD_DATA
+    mov rdx, PAYLOAD_DATA_SIZE
+    call _PRINT_STR
     mov rsi, RECV_BUFFER
     add rsi, 28
-    mov rdx, rax
+    mov rdx, r14
     sub rdx, 28
     call _PRINT_STR
     ;newstr
@@ -185,6 +210,8 @@ _start:
     mov rdx, 1
     call _PRINT_STR
 
+    inc r13
+    jmp .main_loop
 .noerrorexit:
     mov rax, 60
     mov rdi, 0

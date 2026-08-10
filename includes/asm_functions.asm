@@ -1,6 +1,6 @@
 section .rodata
     MINUSCHAR db "-"
-
+    NEWSTRING db 0xA
 
 section .text
 ;Print str, RDX LENGTH OF BUFF, RSI PTR TO DATA
@@ -278,6 +278,72 @@ _APPEND_FIRST_STR:
     mov rsp, rbp
     pop rbp
     ret
+
+
+;Gets pointer to ip string in RSI, return binary ip addr for sock in RAX
+;if reg R11 store 1 thats big endian, 0 little endian
+_STRIP_TO_BINIP:
+    push rbp
+    mov rbp, rsp
+    
+    ;fin ip
+    xor rax, rax
+    ;storing buf
+    xor rcx, rcx
+    ;curr octet in bin
+    xor rdx, rdx
+.loop:
+    movzx rcx, byte [rsi]
+    inc rsi
+    ;end of all octets 0
+    test rcx, rcx
+    jz .endloop
+    cmp rcx, 0xA
+    je .endloop
+    
+    ;end octet storing
+    cmp rcx, '.'
+    je .store_octet
+
+    ;check errors
+    cmp rcx, '0'
+    jl .errorexit
+    cmp rcx, '9'
+    jg .errorexit
+
+    ;parse str to tmp octet
+    sub rcx, '0'
+    imul rdx, 10
+    add rdx, rcx
+    jmp .loop
+.store_octet:
+    ;check that octet less than 255
+    cmp rdx, 255
+    jg .errorexit
+    ;store octet
+    shl rax, 8
+    add rax, rdx  
+    xor rdx, rdx
+    jmp .loop
+.errorexit: 
+    mov rax, -1
+    mov rsp, rbp
+    pop rbp
+    ret
+.endloop:
+    ;get last octet
+    shl rax, 8
+    add rax, rdx
+    ;check if little endian
+    test r11, r11
+    jz .little_endian
+.doneexit:
+    mov rsp, rbp
+    pop rbp
+    ret
+.little_endian:
+    bswap eax
+    jmp .doneexit
 
 
 ;SOME MACROSES

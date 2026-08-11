@@ -50,8 +50,7 @@ section .data
 
 
 section .rodata
-    TIME_KEY db "-t"
-    STANDART_CTR equ 4
+    TIME_KEY db "-t", 0
     PING_PRINT db "ping success for ip: "
     PING_PRINT_SIZE equ ($ - PING_PRINT)
     PAYLOAD_DATA db " payload packet data: "
@@ -67,7 +66,7 @@ section .bss
     PING_ADDR resb 16
     PING_ADDR_RECV resb 16
     RECV_BUFFER resb 4096
-
+    STANDART_CTR resd 1
 
 section .text
 ;OPEN RAW SOCKET return in RAX
@@ -86,29 +85,56 @@ _GET_RAW_SOCKET:
     ret
 
 
+;GET argc - RBX,  argv ptr - RSI and process args, error result if RAX < 0
+_OPTARG:
+    push rbp
+    mov rbp, rsp
+    
+    ;More than 3 arg (name, addr, -t opt)    
+    cmp rbx, 3
+    jg .error
+    ;Less than 2arg (name, addr)    
+    cmp rbx, 1
+    jle .error
+    mov byte [STANDART_CTR], 4
+    ;3 args, have check -t
+    cmp rbx, 3
+    je .thirdarg
+
+.noerror:
+    xor rax, rax
+    mov rsp, rbp
+    pop rbp
+    ret
+.thirdarg:
+    mov rdi, [rsi + 24]
+    mov rdx, TIME_KEY
+    call _STR_CMP
+    cmp rax, 1
+    je .settime
+.error:    
+    mov rax, -1
+    mov rsp, rbp
+    pop rbp
+    ret
+.settime:
+    mov byte [STANDART_CTR], 100
+    jmp .noerror
+
+
 _start:
 ;GET STRING FOR IP ADDRES
     mov rbx, [rsp]
-    ;More than 3 arg (name, addr, -t opt)
-    cmp rbx, 3
-    jg .errorexit
-    ;Less than 2arg (name, addr)    
-    cmp rbx, 1
-    jle .errorexit
+    ;CHECK ARGS
+    mov rsi, rsp
+    call _OPTARG
+    test rax, rax
+    js .errorexit
 
     lea r12, [rsp + 8]
     mov rsi, [rsp + 16]
     call _STRLEN
     mov [IP_ADDR_STR_SIZE], rax
-
-    ;DEBUG PRINTS
-    ;mov rsi, [rsp + 16]
-    ;mov rdx, [IP_ADDR_STR_SIZE]
-    ;call _PRINT_STR
-    ;mov rsi, NEWSTRING
-    ;mov rdx, 1
-    ;call _PRINT_STR
-    
     ;CONVERT ADDR TO BIN
     mov rsi, [rsp + 16]
     mov r11, 1
@@ -122,15 +148,6 @@ _start:
     mov word [PING_ADDR + SOCKADDR_IN.sin_port], PORT
     mov dword [PING_ADDR + SOCKADDR_IN.sin_addr], eax
     mov qword [PING_ADDR + SOCKADDR_IN.sin_zero], 0
-    ;DEBUG PRINT
-    ;mov rdi, [PING_ADDR + SOCKADDR_IN.sin_addr]
-    ;mov rsi, PRINTER_BUFFER
-    ;mov rdx, 4096
-    ;call _PRINT_INT    
-    ;mov rsi, NEWSTRING
-    ;mov rdx, 1
-    ;call _PRINT_STR
-
     call _GET_RAW_SOCKET
     ;test for sock err
     test rax, rax
@@ -155,7 +172,7 @@ _start:
     xor r13, r13
 .main_loop:
     ;if more 4 ping just exit without -t arg
-    cmp r13, STANDART_CTR
+    cmp r13, [STANDART_CTR]
     jge .noerrorexit
     ;sendto syscall (sock_fd, buf, len, flags, dest_addr, addr_len)
     mov rax, 44

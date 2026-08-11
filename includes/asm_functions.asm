@@ -346,6 +346,33 @@ _STRIP_TO_BINIP:
     jmp .doneexit
 
 
+;STRCOMPARE(rdi, rdx) COMPARE TO STRINGS BY PTRS
+;return rax 1 if queal
+_STR_CMP:
+    push rbp
+    mov rbp, rsp
+.loop:
+    mov al, [rdi]
+    mov bl, [rdx]
+    cmp al, bl
+    jne .not_equal
+    test al, al
+    jz .equal               ; оба байта нулевые — конец, строки равны
+    inc rdi
+    inc rdx
+    jmp .loop
+.equal:
+    mov rax, 1
+    mov rsp, rbp
+    pop rbp
+    ret
+.not_equal:
+    xor rax, rax
+    mov rsp, rbp
+    pop rbp
+    ret
+
+
 ;SOME MACROSES
 %macro print 2
     push rax

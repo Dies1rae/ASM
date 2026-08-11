@@ -100,8 +100,6 @@ _PARSE_INT:
     xor rcx, rcx
     xor rax, rax
 .loop:
-    cmp rcx, rdx
-    jge .done
     movzx rbx, byte [rsi + rcx]
     cmp rbx, '-'
     je .is_neg
